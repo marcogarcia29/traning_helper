@@ -23,8 +23,6 @@ df = db.load_workouts(user_id)
 
 if not df.empty:
     # --- Limpeza e Preparação dos Dados ---
-    # Converte a coluna de data para o formato datetime
-    df['data_registro'] = pd.to_datetime(df['data_registro'])
     # Converte a coluna de data para o formato datetime para manipulação
     df['date'] = pd.to_datetime(df['date'])
     # Garante que a coluna de peso seja numérica
@@ -32,34 +30,34 @@ if not df.empty:
 
     # Extrai o valor numérico da coluna 'carga' (ex: '10kg' -> 10.0)
     # O 'coerce' transforma erros em 'NaN' (Not a Number)
-    df['carga'] = pd.to_numeric(df['carga'], errors='coerce')
+    df['carga'] = pd.to_numeric(df['weight'], errors='coerce')
     df.dropna(subset=['carga'], inplace=True) # Remove linhas onde a carga não era um número
 
     # --- Interface do Usuário ---
-    lista_exercicios = df['exercicio'].unique()
+    #lista_exercicios = df['exercicio'].unique()
     lista_exercicios = df['exercise'].unique()
     exercicio_selecionado = st.selectbox("Selecione um exercício para ver a evolução:", options=lista_exercicios)
 
     if exercicio_selecionado:
         # Filtra o DataFrame para o exercício escolhido
-        df_exercicio = df[df['exercicio'] == exercicio_selecionado]
+        #df_exercicio = df[df['exercicio'] == exercicio_selecionado]
         df_exercicio = df[df['exercise'] == exercicio_selecionado].copy()
 
         if not df_exercicio.empty:
             st.subheader(f"Evolução de Carga para: {exercicio_selecionado}")
-            st.subheader(f"Evolução de Carga Máxima para: {exercicio_selecionado}")
+            #st.subheader(f"Evolução de Carga Máxima para: {exercicio_selecionado}")
 
             # --- Prepara os dados para o gráfico de evolução geral ---
             # 1. Normaliza a data para ignorar horas/minutos/segundos
             df_agrupado_dia = df_exercicio.copy()
-            df_agrupado_dia['dia_registro'] = df_agrupado_dia['data_registro'].dt.normalize()
+            df_agrupado_dia['dia_registro'] = df_agrupado_dia['date'].dt.normalize()
             # Agrupa por dia e pega a carga máxima levantada naquele dia
             df_evolucao = df_exercicio.groupby(df_exercicio['date'].dt.date)['weight'].max().reset_index()
             df_evolucao.rename(columns={'date': 'Data', 'weight': 'Carga Máxima (kg)'}, inplace=True)
 
             # 2. Agrupa por dia e pega a carga máxima daquele dia
-            df_evolucao = df_agrupado_dia.groupby('dia_registro')['carga'].max().reset_index()
-            df_evolucao.rename(columns={'dia_registro': 'Data', 'carga': 'Carga Máxima (kg)'}, inplace=True)
+            # df_evolucao = df_agrupado_dia.groupby('dia_registro')['weight'].max().reset_index()
+            # df_evolucao.rename(columns={'dia_registro': 'Data', 'carga': 'Carga Máxima (kg)'}, inplace=True)
 
             # --- Cria o gráfico de evolução com Altair ---
             chart_evolucao = alt.Chart(df_evolucao).mark_line(point=True, strokeWidth=3).encode(
@@ -69,7 +67,7 @@ if not df.empty:
                 #tooltip=[alt.Tooltip('Data:T', format='%d/%m/%Y'), 'Carga Máxima (kg):Q']
             ).interactive()
             st.altair_chart(chart_evolucao, width='stretch')
-            st.altair_chart(chart_evolucao, use_container_width=True)
+            #st.altair_chart(chart_evolucao, use_container_width=True)
 
             st.divider()
 
@@ -79,7 +77,7 @@ if not df.empty:
             st.header("Histórico Detalhado do Exercício")
             
             # Pega as datas únicas para o exercício selecionado
-            datas_disponiveis = sorted(df_exercicio['data_registro'].dt.date.unique(), reverse=True)
+            datas_disponiveis = sorted(df_exercicio['date'].dt.date.unique(), reverse=True)
             
             if datas_disponiveis:
                 data_selecionada = st.selectbox(
@@ -147,13 +145,13 @@ if not df.empty:
 
                 # Gráfico para a data selecionada
                 with col1:
-                    df_data_selecionada = df_exercicio[df_exercicio['data_registro'].dt.date == data_selecionada]
+                    df_data_selecionada = df_exercicio[df_exercicio['date'].dt.date == data_selecionada]
                     criar_grafico_dia(df_data_selecionada, data_selecionada, "Treino Selecionado")
 
                 # Gráfico para a próxima data de treino
                 with col2:
                     if proxima_data:
-                        df_proxima_data = df_exercicio[df_exercicio['data_registro'].dt.date == proxima_data]
+                        df_proxima_data = df_exercicio[df_exercicio['date'].dt.date == proxima_data]
                         criar_grafico_dia(df_proxima_data, proxima_data, "Próximo Treino")
                     else:
                         st.subheader("Próximo Treino")
